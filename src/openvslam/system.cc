@@ -172,6 +172,24 @@ void system::save_map_database(const std::string& path) const {
     resume_other_threads();
 }
 
+// NOTE: This function is experimental and is not working!!!
+void system::get_map_db(data::map_database* &map_db) {
+    
+    map_db = map_db_; 
+    
+}
+
+// This function appears to be working!
+std::vector<Mat44_t> system::get_cam_poses() {
+    pause_other_threads();
+    io::trajectory_io trajectory_io(map_db_);
+    std::vector<Mat44_t> poses;
+    poses = trajectory_io.get_cam_poses();
+    resume_other_threads();
+
+    return poses;
+}
+
 const std::shared_ptr<publish::map_publisher> system::get_map_publisher() const {
     return map_publisher_;
 }
@@ -232,6 +250,27 @@ void system::abort_loop_BA() {
     global_optimizer_->abort_loop_BA();
 }
 
+int system::get_tracking_state() {
+    
+    if (tracker_->tracking_state_ == tracker_state_t::Tracking) {
+        return 1;
+    }
+
+    else {
+        return 0;
+    }
+}
+
+int system::get_last_tracking_state() {
+    
+    if (tracker_->last_tracking_state_ == tracker_state_t::Tracking) {
+        return 1;
+    }
+    
+    else {
+        return 0;
+    }
+}
 Mat44_t system::feed_monocular_frame(const cv::Mat& img, const double timestamp, const cv::Mat& mask) {
     assert(camera_->setup_type_ == camera::setup_type_t::Monocular);
 

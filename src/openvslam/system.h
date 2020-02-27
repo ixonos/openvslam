@@ -65,6 +65,14 @@ public:
     //! Save the map database to the MessagePack file
     void save_map_database(const std::string& path) const;
 
+    //!Get the map database -- Experimental!!!! not working!!!!
+    
+    void get_map_db(data::map_database* &map_db);
+
+     //! Get all of the camera poses; experimental, but seems to be working!!!!
+    
+    std::vector<Mat44_t> get_cam_poses();
+
     //! Get the map publisher
     const std::shared_ptr<publish::map_publisher> get_map_publisher() const;
 
@@ -143,6 +151,9 @@ public:
     //!! Termination of the system is requested or not
     bool terminate_is_requested() const;
 
+	//! get info about current and previous tracking state
+    int get_tracking_state();
+    int get_last_tracking_state();
 private:
     //! Check reset request of the system
     void check_reset_request();

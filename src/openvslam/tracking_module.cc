@@ -238,6 +238,13 @@ void tracking_module::track() {
         if (succeeded && new_keyframe_is_needed()) {
             insert_new_keyframe();
         }
+        // if frame processing gets ahead of keyframe processing, throttle back as mapping needs the keyframes to be available
+        while((static_cast<int>(curr_frm_.id_) - mapper_->get_curr_keyframe_srcframe_id() > 6) 
+               && (mapper_->get_num_queued_keyframes() != 0)) {
+            
+            spdlog::warn("tracking module is throttling for 10ms seconds...");
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
 
         // tidy up observations
         for (unsigned int idx = 0; idx < curr_frm_.num_keypts_; ++idx) {

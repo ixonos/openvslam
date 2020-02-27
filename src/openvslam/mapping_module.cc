@@ -34,6 +34,12 @@ void mapping_module::set_global_optimization_module(global_optimization_module* 
     global_optimizer_ = global_optimizer;
 }
 
+int mapping_module::get_curr_keyframe_srcframe_id(){
+    if(cur_keyfrm_){
+        return cur_keyfrm_->src_frm_id_;
+    }
+    return 0;
+}
 void mapping_module::run() {
     spdlog::info("start mapping module");
 

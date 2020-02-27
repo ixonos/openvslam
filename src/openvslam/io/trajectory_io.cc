@@ -13,6 +13,80 @@ namespace io {
 
 trajectory_io::trajectory_io(data::map_database* map_db)
     : map_db_(map_db) {}
+// Get camera poses (and potentially other info)
+// pass it back so we can return out of the System object
+std::vector<Mat44_t> trajectory_io::get_cam_poses() {
+    
+    std::vector<Mat44_t> poses;
+
+    std::lock_guard<std::mutex> lock(data::map_database::mtx_database_);
+
+    // 1. acquire the frame stats
+
+    assert(map_db_);
+    const auto frm_stats = map_db_->get_frame_statistics();
+
+    // 2. save the frames
+
+    const auto num_valid_frms = frm_stats.get_num_valid_frames();
+    const auto reference_keyframes = frm_stats.get_reference_keyframes();
+    const auto rel_cam_poses_from_ref_keyfrms = frm_stats.get_relative_cam_poses();
+    const auto timestamps = frm_stats.get_timestamps();
+    const auto is_lost_frms = frm_stats.get_lost_frames();
+
+    if (num_valid_frms == 0) {
+        spdlog::warn("there are no valid frames, cannot dump frame trajectory");
+        return poses;
+    }
+
+    spdlog::info("return frame trajectory in \"{}\" format from frame {} to frame {} ({} frames)",
+                 "KITTI", reference_keyframes.begin()->first, reference_keyframes.rbegin()->first, num_valid_frms);
+
+    const auto rk_itr_bgn = reference_keyframes.begin();
+    const auto rc_itr_bgn = rel_cam_poses_from_ref_keyfrms.begin();
+    const auto rk_itr_end = reference_keyframes.end();
+    const auto rc_itr_end = rel_cam_poses_from_ref_keyfrms.end();
+    auto rk_itr = rk_itr_bgn;
+    auto rc_itr = rc_itr_bgn;
+
+    int offset = rk_itr->first;
+    unsigned int prev_frm_id = 0;
+    for (unsigned int i = 0; i < num_valid_frms; ++i, ++rk_itr, ++rc_itr) {
+        // check frame ID
+        std::cout << rk_itr->first << " " << rc_itr->first << std::endl;
+        assert(rk_itr->first == rc_itr->first);
+        const auto frm_id = rk_itr->first;
+
+        // check if the frame was lost or not
+        if (is_lost_frms.at(frm_id)) {
+            spdlog::warn("frame {} was lost", frm_id);
+            continue;
+        }
+
+        // check if the frame was skipped or not
+        if (frm_id != i + offset) {
+            spdlog::warn("frame(s) from {} to {} was/were skipped", prev_frm_id + 1, frm_id - 1);
+            offset = frm_id - i;
+        }
+
+        auto ref_keyfrm = rk_itr->second;
+        const Mat44_t cam_pose_rw = ref_keyfrm->get_cam_pose();
+        const Mat44_t rel_cam_pose_cr = rc_itr->second;
+
+        const Mat44_t cam_pose_cw = rel_cam_pose_cr * cam_pose_rw;
+        const Mat44_t cam_pose_wc = cam_pose_cw.inverse();
+
+        poses.push_back(cam_pose_wc);
+
+        prev_frm_id = frm_id;
+    }
+
+    if (rk_itr != rk_itr_end || rc_itr != rc_itr_end) {
+        spdlog::error("the sizes of frame statistics are not matched");
+    }
+
+    return poses;
+}
 
 void trajectory_io::save_frame_trajectory(const std::string& path, const std::string& format) const {
     std::lock_guard<std::mutex> lock(data::map_database::mtx_database_);

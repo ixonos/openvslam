@@ -33,6 +33,9 @@ public:
      */
     void save_keyframe_trajectory(const std::string& path, const std::string& format) const;
 
+    // get cam poses, so we can expose them through the system object
+    std::vector<Mat44_t> get_cam_poses();
+
 private:
     //! map_database
     data::map_database* const map_db_ = nullptr;

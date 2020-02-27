@@ -37,6 +37,8 @@ public:
     //! Set the global optimization module
     void set_global_optimization_module(global_optimization_module* global_optimizer);
 
+    int get_curr_keyframe_srcframe_id();
+
     //-----------------------------------------
     // main process
 
